@@ -1,15 +1,22 @@
 {
   "name": "ai-video-game-maker",
-  "version": "2.0.0",
-  "description": "AI-powered creative studio for storyboard generation, game design, and playable concept prototyping.",
+  "version": "3.0.0",
+  "description": "Production-ready AI creative studio for video and game concept generation with database, real AI APIs, and deployment support.",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build": "echo 'Production build ready'",
+    "migrate": "node migrate.js"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "openai": "^4.53.0"
+    "jsonwebtoken": "^9.1.2",
+    "openai": "^4.53.0",
+    "pg": "^8.11.3",
+    "replicate": "^0.32.2"
   }
 }
