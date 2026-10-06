@@ -1,2 +1,5 @@
-# ai-video-game-maker
-An AI-powered platform for creating videos and games
+node_modules/
+.env
+.DS_Store
+npm-debug.log*
+coverage/

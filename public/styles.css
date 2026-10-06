@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Video & Game Maker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark">AI</div>
+          <div>
+            <p class="eyebrow">Creative Studio</p>
+            <h1>Video + Game Maker</h1>
+          </div>
+        </div>
+        <button class="primary-btn" id="generateBtn">Generate concept</button>
+      </header>
+
+      <main class="app-grid">
+        <section class="panel left-panel">
+          <label for="promptInput">Creative prompt</label>
+          <textarea id="promptInput" rows="6" placeholder="Describe the world, characters, and mood for your next video and game...">A neon dragon guarding a floating city at sunrise</textarea>
+
+          <div class="action-row">
+            <button class="secondary-btn" id="sampleBtn">Use sample prompt</button>
+            <button class="primary-btn" id="playBtn">Play demo game</button>
+          </div>
+
+          <div class="status-box">
+            <p class="label">System</p>
+            <p id="statusText">Ready to generate a concept.</p>
+          </div>
+        </section>
+
+        <section class="panel right-panel">
+          <div class="canvas-header">
+            <div>
+              <p class="eyebrow">Playable prototype</p>
+              <h2 id="gameTitle">Sky Dragon Run</h2>
+            </div>
+            <button class="ghost-btn" id="resetGameBtn">Reset</button>
+          </div>
+
+          <canvas id="gameCanvas" width="760" height="360"></canvas>
+        </section>
+      </main>
+
+      <section class="results-grid">
+        <article class="panel result-panel">
+          <div class="panel-header">
+            <p class="eyebrow">Video concept</p>
+            <h3 id="videoTitle">Loading...</h3>
+          </div>
+          <p id="videoConcept" class="result-copy"></p>
+          <ul id="videoShots" class="chip-list"></ul>
+          <div class="meta-row">
+            <span id="videoDuration"></span>
+            <span id="videoPalette"></span>
+          </div>
+        </article>
+
+        <article class="panel result-panel">
+          <div class="panel-header">
+            <p class="eyebrow">Game concept</p>
+            <h3 id="gameName">Loading...</h3>
+          </div>
+          <p id="gameObjective" class="result-copy"></p>
+          <ul id="gameMechanics" class="chip-list"></ul>
+          <div class="meta-row">
+            <span id="gameGenre"></span>
+            <span id="gameLevel"></span>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

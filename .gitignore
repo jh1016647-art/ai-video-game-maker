@@ -1,0 +1,270 @@
+const promptInput = document.getElementById('promptInput');
+const generateBtn = document.getElementById('generateBtn');
+const sampleBtn = document.getElementById('sampleBtn');
+const playBtn = document.getElementById('playBtn');
+const resetGameBtn = document.getElementById('resetGameBtn');
+const statusText = document.getElementById('statusText');
+
+const videoTitle = document.getElementById('videoTitle');
+const videoConcept = document.getElementById('videoConcept');
+const videoShots = document.getElementById('videoShots');
+const videoDuration = document.getElementById('videoDuration');
+const videoPalette = document.getElementById('videoPalette');
+
+const gameTitle = document.getElementById('gameTitle');
+const gameName = document.getElementById('gameName');
+const gameObjective = document.getElementById('gameObjective');
+const gameMechanics = document.getElementById('gameMechanics');
+const gameGenre = document.getElementById('gameGenre');
+const gameLevel = document.getElementById('gameLevel');
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const samplePrompts = [
+  'A neon dragon guarding a floating city at sunrise',
+  'A stealthy fox exploring a forgotten crystal forest',
+  'A cyberpunk samurai racing through a rainstorm skyline',
+  'A magical village built inside the roots of a giant tree'
+];
+
+let gameState = null;
+let animationFrame = null;
+
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+async function generateConcepts() {
+  const prompt = promptInput.value.trim() || 'A neon dragon guarding a floating city at sunrise';
+  setStatus(`Generating concept for: “${prompt}”`);
+
+  try {
+    const response = await fetch(`/api/generate?prompt=${encodeURIComponent(prompt)}`);
+    const data = await response.json();
+
+    const { video, game } = data;
+
+    videoTitle.textContent = video.title;
+    videoConcept.textContent = video.concept;
+    videoDuration.textContent = `Duration: ${video.duration}`;
+    videoPalette.textContent = `Style: ${video.style}`;
+    videoShots.innerHTML = video.shots.map((shot) => `<li>${shot}</li>`).join('');
+
+    gameTitle.textContent = game.title;
+    gameName.textContent = game.title;
+    gameObjective.textContent = game.objective;
+    gameMechanics.innerHTML = game.mechanics.map((item) => `<li>${item}</li>`).join('');
+    gameGenre.textContent = `Genre: ${game.genre}`;
+    gameLevel.textContent = `Level: ${game.levelIdea}`;
+
+    setStatus('Concept generated successfully.');
+    setupGame(game.title, prompt);
+  } catch (error) {
+    console.error(error);
+    setStatus('Generation failed. Please try again.');
+  }
+}
+
+function samplePrompt() {
+  const random = samplePrompts[Math.floor(Math.random() * samplePrompts.length)];
+  promptInput.value = random;
+  generateConcepts();
+}
+
+function setupGame(name, prompt) {
+  const player = {
+    x: 90,
+    y: 260,
+    width: 26,
+    height: 26,
+    speed: 4,
+    vx: 0,
+    vy: 0,
+    jumpPower: 10,
+    color: '#22d3ee'
+  };
+
+  const goal = {
+    x: 660,
+    y: 180,
+    width: 28,
+    height: 28,
+    color: '#f9a8d4'
+  };
+
+  const stars = Array.from({ length: 7 }, (_, index) => ({
+    x: 120 + index * 90,
+    y: 100 + (index % 2) * 80,
+    r: 10,
+    color: index % 2 === 0 ? '#facc15' : '#f97316'
+  }));
+
+  const obstacles = [
+    { x: 300, y: 250, w: 90, h: 18, color: '#f87171' },
+    { x: 500, y: 220, w: 110, h: 18, color: '#fb7185' }
+  ];
+
+  const keys = {
+    left: false,
+    right: false,
+    jump: false
+  };
+
+  gameState = {
+    prompt,
+    name,
+    player,
+    goal,
+    stars,
+    obstacles,
+    keys,
+    score: 0,
+    won: false,
+    best: 0
+  };
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') keys.left = true;
+    if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') keys.right = true;
+    if (event.key === 'ArrowUp' || event.key === ' ' || event.key.toLowerCase() === 'w') {
+      keys.jump = true;
+      if (gameState && !gameState.won && gameState.player.y >= 226) {
+        gameState.player.vy = -gameState.player.jumpPower;
+      }
+    }
+  });
+
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') keys.left = false;
+    if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') keys.right = false;
+    if (event.key === 'ArrowUp' || event.key === ' ' || event.key.toLowerCase() === 'w') keys.jump = false;
+  });
+
+  drawGame();
+}
+
+function drawGame() {
+  if (!gameState) {
+    return;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const { player, goal, stars, obstacles, score, won } = gameState;
+
+  ctx.fillStyle = '#0d1b2a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = 'rgba(34, 211, 238, 0.25)';
+  ctx.fillRect(0, 300, canvas.width, 60);
+
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '16px Inter';
+  ctx.fillText(`${gameState.name} — score: ${score}`, 16, 26);
+
+  player.vx = 0;
+  if (gameState.keys.left) player.vx = -player.speed;
+  if (gameState.keys.right) player.vx = player.speed;
+  player.x += player.vx;
+
+  player.vy += 0.6;
+  player.y += player.vy;
+  player.y = Math.min(player.y, 280);
+
+  if (player.y >= 280) {
+    player.y = 280;
+    player.vy = 0;
+  }
+
+  stars.forEach((star) => {
+    const dx = player.x + player.width / 2 - star.x;
+    const dy = player.y + player.height / 2 - star.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 25) {
+      star.x = -100;
+      gameState.score += 10;
+    }
+
+    ctx.beginPath();
+    ctx.fillStyle = star.color;
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  obstacles.forEach((obstacle) => {
+    const touched =
+      player.x < obstacle.x + obstacle.w &&
+      player.x + player.width > obstacle.x &&
+      player.y < obstacle.y + obstacle.h &&
+      player.y + player.height > obstacle.y;
+
+    if (touched) {
+      if (player.x + player.width <= obstacle.x + 10) {
+        player.x = obstacle.x - player.width;
+      } else if (player.x >= obstacle.x + obstacle.w - 10) {
+        player.x = obstacle.x + obstacle.w;
+      } else {
+        player.y = obstacle.y - player.height;
+        player.vy = 0;
+      }
+    }
+
+    ctx.fillStyle = obstacle.color;
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+  });
+
+  const reachedGoal =
+    player.x < goal.x + goal.width &&
+    player.x + player.width > goal.x &&
+    player.y < goal.y + goal.height &&
+    player.y + player.height > goal.y;
+
+  if (reachedGoal) {
+    gameState.won = true;
+    if (gameState.score > gameState.best) {
+      gameState.best = gameState.score;
+    }
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '700 28px Inter';
+    ctx.fillText('Level complete!', 270, 120);
+  }
+
+  ctx.fillStyle = goal.color;
+  ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+  if (!won) {
+    animationFrame = window.requestAnimationFrame(drawGame);
+  }
+}
+
+function startDemoGame() {
+  if (!gameState) {
+    samplePrompt();
+    return;
+  }
+  if (animationFrame) {
+    cancelAnimationFrame(animationFrame);
+  }
+  drawGame();
+}
+
+sampleBtn.addEventListener('click', samplePrompt);
+generateBtn.addEventListener('click', generateConcepts);
+playBtn.addEventListener('click', startDemoGame);
+resetGameBtn.addEventListener('click', () => {
+  if (gameState) {
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+    }
+    setupGame(gameState.name, gameState.prompt);
+  }
+});
+
+generateConcepts();
