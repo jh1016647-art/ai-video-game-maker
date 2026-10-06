@@ -1,0 +1,464 @@
+const projectNameInput = document.getElementById('projectNameInput');
+const promptInput = document.getElementById('promptInput');
+const styleSelect = document.getElementById('styleSelect');
+const genreSelect = document.getElementById('genreSelect');
+const modelSelect = document.getElementById('modelSelect');
+const usernameDisplay = document.getElementById('usernameDisplay');
+const projectList = document.getElementById('projectList');
+
+const generateBtn = document.getElementById('generateBtn');
+const videoBtn = document.getElementById('videoBtn');
+const gameBtn = document.getElementById('gameBtn');
+const playBtn = document.getElementById('playBtn');
+const exportBtn = document.getElementById('exportBtn');
+const resetGameBtn = document.getElementById('resetGameBtn');
+const loginBtn = document.getElementById('loginBtn');
+const submitLoginBtn = document.getElementById('submitLoginBtn');
+const closeLoginBtn = document.getElementById('closeLoginBtn');
+const newProjectBtn = document.getElementById('newProjectBtn');
+const saveProjectBtn = document.getElementById('saveProjectBtn');
+const statusText = document.getElementById('statusText');
+const loginModal = document.getElementById('loginModal');
+const loginUsername = document.getElementById('loginUsername');
+const loginPassword = document.getElementById('loginPassword');
+
+const videoTitle = document.getElementById('videoTitle');
+const videoConcept = document.getElementById('videoConcept');
+const videoShots = document.getElementById('videoShots');
+const videoDuration = document.getElementById('videoDuration');
+const videoStyle = document.getElementById('videoStyle');
+
+const gameTitle = document.getElementById('gameTitle');
+const gameObjective = document.getElementById('gameObjective');
+const gameMechanics = document.getElementById('gameMechanics');
+const gameGenre = document.getElementById('gameGenre');
+const gameLevel = document.getElementById('gameLevel');
+
+const previewTitle = document.getElementById('previewTitle');
+const projectSummary = document.getElementById('projectSummary');
+const summaryMood = document.getElementById('summaryMood');
+const summaryGoal = document.getElementById('summaryGoal');
+const summaryVision = document.getElementById('summaryVision');
+const summaryAi = document.getElementById('summaryAi');
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let projects = [];
+let activeProjectId = null;
+let gameState = null;
+let animationFrame = null;
+
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+async function fetchProjects() {
+  const response = await fetch('/api/projects');
+  const data = await response.json();
+  projects = data.projects || [];
+  renderProjectList();
+  if (projects.length) {
+    loadProject(projects[0]);
+  }
+}
+
+function renderProjectList() {
+  if (!projects.length) {
+    projectList.innerHTML = '<div class="project-item">No saved projects yet.</div>';
+    return;
+  }
+
+  projectList.innerHTML = projects
+    .map((project) => `
+      <button class="project-item ${project.id === activeProjectId ? 'active' : ''}" data-id="${project.id}">
+        <strong>${project.title || 'Untitled'}</strong><br />
+        <small>${project.prompt || 'Untitled prompt'}</small>
+      </button>
+    `)
+    .join('');
+
+  for (const button of projectList.querySelectorAll('.project-item')) {
+    button.addEventListener('click', () => loadProjectById(button.dataset.id));
+  }
+}
+
+function loadProject(project) {
+  activeProjectId = project.id;
+  projectNameInput.value = project.title || 'Untitled Project';
+  promptInput.value = project.prompt || 'A magical city built inside the roots of a giant tree';
+  styleSelect.value = project.style || 'cinematic';
+  genreSelect.value = project.genre || 'action';
+  previewTitle.textContent = project.title || 'Untitled Project';
+
+  if (project.video) renderVideoCard(project.video);
+  if (project.game) renderGameCard(project.game);
+  renderProjectSummary({ style: project.style, genre: project.genre, video: project.video, game: project.game });
+  setupGame(project.game?.title || 'Project Quest', project.prompt || 'adventure');
+  renderProjectList();
+}
+
+function loadProjectById(id) {
+  const project = projects.find((item) => item.id === id);
+  if (project) loadProject(project);
+}
+
+async function saveProject() {
+  const payload = {
+    id: activeProjectId || undefined,
+    title: projectNameInput.value.trim() || 'Untitled Project',
+    prompt: promptInput.value.trim() || 'A neon dragon guarding a floating city at sunrise',
+    style: styleSelect.value,
+    genre: genreSelect.value,
+    video: {
+      title: videoTitle.textContent,
+      concept: videoConcept.textContent,
+      duration: document.getElementById('videoDuration').textContent.replace('Duration: ', ''),
+      style: styleSelect.value,
+      palette: 'Custom palette',
+      shots: Array.from(videoShots.querySelectorAll('li')).map((li) => li.textContent),
+      hook: 'Creative concept hook'
+    },
+    game: {
+      title: gameTitle.textContent,
+      objective: gameObjective.textContent,
+      genre: genreSelect.value,
+      mechanics: Array.from(gameMechanics.querySelectorAll('li')).map((li) => li.textContent),
+      levelIdea: document.getElementById('gameLevel').textContent.replace('Level concept: ', '')
+    }
+  };
+
+  const response = await fetch('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  activeProjectId = data.project.id;
+  await fetchProjects();
+  setStatus(`Saved project: ${data.project.title}`);
+}
+
+async function loginToStudio() {
+  const username = loginUsername.value.trim() || 'creator';
+  const password = loginPassword.value.trim() || 'letmein';
+
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await response.json();
+  if (!data.success) {
+    setStatus(data.message || 'Login failed.');
+    return;
+  }
+
+  usernameDisplay.value = data.user.username;
+  loginModal.classList.add('hidden');
+  setStatus(`Logged in as ${data.user.username}`);
+}
+
+function renderProjectSummary(data) {
+  const style = data.style || styleSelect.value;
+  const genre = data.genre || genreSelect.value;
+  const projectName = projectNameInput.value.trim() || 'Untitled Project';
+  previewTitle.textContent = projectName;
+
+  projectSummary.textContent = `This concept packages a ${style} video treatment and a ${genre} game prototype for “${promptInput.value.trim() || 'a cinematic adventure'}.” It gives you a storyteller’s hook, a playable prototype loop, and a reusable project structure for future expansion.`;
+  summaryMood.textContent = style.charAt(0).toUpperCase() + style.slice(1);
+  summaryGoal.textContent = data.game?.objective || 'Create a playable story pitch';
+  summaryVision.textContent = data.video?.palette || 'High-contrast cinematic world';
+  summaryAi.textContent = modelSelect.value === 'offline' ? 'Offline mock mode' : `${modelSelect.value} ready`;
+}
+
+function renderVideoCard(video) {
+  if (!video) return;
+
+  videoTitle.textContent = video.title || 'Untitled Story';
+  videoConcept.textContent = video.concept || 'A bold visual concept ready for production.';
+  videoDuration.textContent = `Duration: ${video.duration || '45 seconds'}`;
+  videoStyle.textContent = `Style: ${video.style || styleSelect.value}`;
+
+  if (Array.isArray(video.shots)) {
+    videoShots.innerHTML = video.shots.map((shot) => `<li>${shot}</li>`).join('');
+  } else {
+    videoShots.innerHTML = '<li>Wide establishing shot</li><li>Hero movement beat</li><li>Final reveal</li>';
+  }
+}
+
+function renderGameCard(game) {
+  if (!game) return;
+
+  gameTitle.textContent = game.title || 'Untitled Quest';
+  gameObjective.textContent = game.objective || 'Reach the goal and survive the environment.';
+  gameGenre.textContent = `Genre: ${game.genre || genreSelect.value}`;
+  gameLevel.textContent = `Level concept: ${game.levelIdea || 'A layered arena with hidden routes and boss encounter.'}`;
+
+  if (Array.isArray(game.mechanics)) {
+    gameMechanics.innerHTML = game.mechanics.map((item) => `<li>${item}</li>`).join('');
+  } else {
+    gameMechanics.innerHTML = '<li>Fast movement and responsive controls</li><li>Collect power-ups</li><li>Build challenge loops</li>';
+  }
+}
+
+async function generateProject() {
+  const prompt = promptInput.value.trim() || 'A neon dragon guarding a floating city at sunrise';
+  const style = styleSelect.value;
+  const genre = genreSelect.value;
+  setStatus(`Generating concept for: ${prompt}`);
+
+  try {
+    const response = await fetch(`/api/generate?prompt=${encodeURIComponent(prompt)}&style=${encodeURIComponent(style)}&genre=${encodeURIComponent(genre)}`);
+    const data = await response.json();
+
+    renderVideoCard(data.video);
+    renderGameCard(data.game);
+    renderProjectSummary(data);
+    setupGame(data.game.title, prompt);
+    setStatus('Concept generated successfully.');
+  } catch (error) {
+    console.error(error);
+    setStatus('Generation failed. Please try again.');
+  }
+}
+
+async function generateVideoOnly() {
+  const prompt = promptInput.value.trim() || 'A neon dragon guarding a floating city at sunrise';
+  const style = styleSelect.value;
+  setStatus('Generating storyboard...');
+
+  try {
+    const response = await fetch(`/api/video?prompt=${encodeURIComponent(prompt)}&style=${encodeURIComponent(style)}`);
+    const data = await response.json();
+    renderVideoCard(data.video);
+    renderProjectSummary({ style, genre: genreSelect.value, video: data.video, game: { objective: 'Playable concept in development' } });
+    setStatus('Video storyboard generated.');
+  } catch (error) {
+    console.error(error);
+    setStatus('Video generation failed.');
+  }
+}
+
+async function generateGameOnly() {
+  const prompt = promptInput.value.trim() || 'A neon dragon guarding a floating city at sunrise';
+  const genre = genreSelect.value;
+  setStatus('Generating game concept...');
+
+  try {
+    const response = await fetch(`/api/game?prompt=${encodeURIComponent(prompt)}&genre=${encodeURIComponent(genre)}`);
+    const data = await response.json();
+    renderGameCard(data.game);
+    renderProjectSummary({ style: styleSelect.value, genre, game: data.game, video: { palette: 'Cinematic palette' } });
+    setStatus('Game design generated.');
+  } catch (error) {
+    console.error(error);
+    setStatus('Game generation failed.');
+  }
+}
+
+function downloadProject() {
+  const prompt = promptInput.value.trim() || 'creative prompt';
+  const title = projectNameInput.value.trim() || 'untitled-project';
+  const url = `/api/export?title=${encodeURIComponent(title)}&prompt=${encodeURIComponent(prompt)}&style=${encodeURIComponent(styleSelect.value)}&genre=${encodeURIComponent(genreSelect.value)}`;
+  window.open(url, '_blank');
+  setStatus('Project JSON downloaded.');
+}
+
+function setupGame(name, prompt) {
+  const player = {
+    x: 90,
+    y: 260,
+    width: 26,
+    height: 26,
+    speed: 4,
+    vx: 0,
+    vy: 0,
+    jumpPower: 11,
+    color: '#22d3ee'
+  };
+
+  const goal = {
+    x: 650,
+    y: 180,
+    width: 30,
+    height: 30,
+    color: '#f9a8d4'
+  };
+
+  const stars = Array.from({ length: 8 }, (_, index) => ({
+    x: 150 + index * 70,
+    y: 120 + (index % 2) * 70,
+    r: 9,
+    color: index % 2 === 0 ? '#facc15' : '#f97316'
+  }));
+
+  const obstacles = [
+    { x: 300, y: 250, w: 120, h: 18, color: '#fb7185' },
+    { x: 510, y: 220, w: 110, h: 18, color: '#f87171' }
+  ];
+
+  gameState = {
+    prompt,
+    name,
+    player,
+    goal,
+    stars,
+    obstacles,
+    keys: { left: false, right: false },
+    score: 0,
+    won: false
+  };
+
+  drawGame();
+}
+
+function drawGame() {
+  if (!gameState) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const { player, goal, stars, obstacles, score, won } = gameState;
+
+  ctx.fillStyle = '#07131d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = 'rgba(34, 211, 238, 0.18)';
+  ctx.fillRect(0, 300, canvas.width, 80);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '600 16px Inter';
+  ctx.fillText(`${gameState.name} — score: ${score}`, 18, 26);
+
+  player.vx = 0;
+  if (gameState.keys.left) player.vx = -player.speed;
+  if (gameState.keys.right) player.vx = player.speed;
+  player.x += player.vx;
+
+  player.vy += 0.7;
+  player.y += player.vy;
+
+  if (player.y >= 300 - player.height) {
+    player.y = 300 - player.height;
+    player.vy = 0;
+  }
+
+  stars.forEach((star) => {
+    const dx = player.x + player.width / 2 - star.x;
+    const dy = player.y + player.height / 2 - star.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 24) {
+      star.x = -100;
+      gameState.score += 10;
+    }
+
+    ctx.beginPath();
+    ctx.fillStyle = star.color;
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  obstacles.forEach((obstacle) => {
+    const hit =
+      player.x < obstacle.x + obstacle.w &&
+      player.x + player.width > obstacle.x &&
+      player.y < obstacle.y + obstacle.h &&
+      player.y + player.height > obstacle.y;
+
+    if (hit) {
+      if (player.x + player.width <= obstacle.x + 10) {
+        player.x = obstacle.x - player.width;
+      } else if (player.x >= obstacle.x + obstacle.w - 10) {
+        player.x = obstacle.x + obstacle.w;
+      } else {
+        player.y = obstacle.y - player.height;
+        player.vy = 0;
+      }
+    }
+
+    ctx.fillStyle = obstacle.color;
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+  });
+
+  const reachedGoal =
+    player.x < goal.x + goal.width &&
+    player.x + player.width > goal.x &&
+    player.y < goal.y + goal.height &&
+    player.y + player.height > goal.y;
+
+  if (reachedGoal) {
+    gameState.won = true;
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '700 28px Inter';
+    ctx.fillText('Level complete!', 260, 120);
+  }
+
+  ctx.fillStyle = goal.color;
+  ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+  if (!won) {
+    animationFrame = requestAnimationFrame(drawGame);
+  }
+}
+
+function playDemo() {
+  if (!gameState) return;
+  if (animationFrame) cancelAnimationFrame(animationFrame);
+  drawGame();
+}
+
+function resetGame() {
+  if (!gameState) return;
+  if (animationFrame) cancelAnimationFrame(animationFrame);
+  setupGame(gameState.name, gameState.prompt);
+}
+
+function handleKeyDown(event) {
+  if (!gameState) return;
+  const key = event.key.toLowerCase();
+  if (event.key === 'ArrowLeft' || key === 'a') gameState.keys.left = true;
+  if (event.key === 'ArrowRight' || key === 'd') gameState.keys.right = true;
+  if (event.key === 'ArrowUp' || key === 'w' || event.key === ' ') {
+    if (gameState.player.y >= 270) {
+      gameState.player.vy = -gameState.player.jumpPower;
+    }
+  }
+}
+
+function handleKeyUp(event) {
+  if (!gameState) return;
+  const key = event.key.toLowerCase();
+  if (event.key === 'ArrowLeft' || key === 'a') gameState.keys.left = false;
+  if (event.key === 'ArrowRight' || key === 'd') gameState.keys.right = false;
+}
+
+loginBtn.addEventListener('click', () => loginModal.classList.remove('hidden'));
+closeLoginBtn.addEventListener('click', () => loginModal.classList.add('hidden'));
+submitLoginBtn.addEventListener('click', loginToStudio);
+newProjectBtn.addEventListener('click', () => {
+  activeProjectId = null;
+  projectNameInput.value = 'New Project';
+  promptInput.value = 'A magical city built inside the roots of a giant tree';
+  setStatus('Started a new project.');
+  renderProjectList();
+});
+
+saveProjectBtn.addEventListener('click', saveProject);
+generateBtn.addEventListener('click', generateProject);
+videoBtn.addEventListener('click', generateVideoOnly);
+gameBtn.addEventListener('click', generateGameOnly);
+playBtn.addEventListener('click', playDemo);
+exportBtn.addEventListener('click', downloadProject);
+resetGameBtn.addEventListener('click', resetGame);
+document.addEventListener('keydown', handleKeyDown);
+document.addEventListener('keyup', handleKeyUp);
+
+fetchProjects();

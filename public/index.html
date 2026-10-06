@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const OpenAI = require('openai');
@@ -7,11 +8,38 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DATA_DIR = path.join(__dirname, 'data');
+const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+
+function ensureDataFile() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(PROJECTS_FILE)) {
+    fs.writeFileSync(PROJECTS_FILE, JSON.stringify([], null, 2));
+  }
+}
+
+function readProjects() {
+  ensureDataFile();
+  try {
+    const raw = fs.readFileSync(PROJECTS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error('Failed to read projects:', error.message);
+    return [];
+  }
+}
+
+function writeProjects(projects) {
+  ensureDataFile();
+  fs.writeFileSync(PROJECTS_FILE, JSON.stringify(projects, null, 2));
+}
 
 function titleCase(str = '') {
   return str
@@ -40,18 +68,18 @@ function buildMockVideo(prompt = 'cyberpunk dragon rescue', style = 'cinematic')
 
   return {
     title: `${titleCase(prompt)} — ${style} storyboard`,
-    concept: `A ${style} visual scene centered on ${cleaned}, blending grand spectacle, emotional focus, and a strong payoff reveal.`,
+    concept: `A ${style} visual storyboard exploring ${cleaned}, blending atmosphere, motion, and a decisive payoff.`,
     duration: '45 seconds',
     style,
     palette: palettes[style] || palettes.cinematic,
     shots: [
       `Wide establishing shot of ${cleaned} from a dramatic angle`,
-      'Hero enters frame with a purposeful movement beat',
-      'Mid-shot revealing the emotional stakes and key action',
-      'Visual payoff using layered effects and dynamic color contrast',
-      'Closing reveal with slow motion and atmospheric sound design'
+      'Hero movement beat with layered motion and dynamic framing',
+      'Character close-up highlighting the emotional shift',
+      'Payoff sequence with enhanced contrast and effects',
+      'Final reveal using atmosphere and slow-motion cadence'
     ],
-    hook: `Open immediately on the most iconic image from ${cleaned} to capture the audience before the conflict escalates.`
+    hook: `Open on the most striking image from ${cleaned} to lock the viewer immediately.`
   };
 }
 
@@ -67,21 +95,19 @@ function buildMockGame(prompt = 'cyberpunk dragon rescue', genre = 'action') {
   return {
     title: `${titleCase(prompt)} Quest`,
     genre: genres[genre] || 'Action Adventure',
-    objective: `Guide the player through ${cleaned} by surviving hazards, unlocking upgrades, and defeating the final challenge.`,
+    objective: `Guide the player through ${cleaned} by surviving hazards, unlocking upgrades, and reaching the final objective.`,
     mechanics: [
       'Fast movement and responsive jump controls',
-      'Collectible power-ups that transform traversal and combat',
-      'Dynamic enemy patterns and environmental hazards',
-      'Short level loops with escalating challenge and rewards'
+      'Collectible power-ups and skill upgrades',
+      'Dynamic enemy and environmental hazard patterns',
+      'Short challenge loops with escalating rewards'
     ],
-    levelIdea: `A vertical arena inspired by ${cleaned}, complete with hidden routes, collectible boosts, and a final boss arena.`
+    levelIdea: `A compact vertical arena inspired by ${cleaned}, with hidden routes, collectibles, and a final boss lane.`
   };
 }
 
 async function generateWithAI(prompt, type, fallback) {
-  if (!openai) {
-    return fallback;
-  }
+  if (!openai) return fallback;
 
   try {
     const response = await openai.chat.completions.create({
@@ -110,8 +136,9 @@ async function generateWithAI(prompt, type, fallback) {
 
 async function createVideoConcept(prompt, style) {
   const fallback = buildMockVideo(prompt, style);
-  const aiPrompt = `Create a creative video storyboard JSON with fields: title, concept, duration, style, palette, shots (array), hook. Prompt: ${prompt}. Style: ${style}.`; 
+  const aiPrompt = `Create a creative video storyboard JSON with fields: title, concept, duration, style, palette, shots (array), hook. Prompt: ${prompt}. Style: ${style}.`;
   const result = await generateWithAI(aiPrompt, 'video', fallback);
+
   return {
     ...fallback,
     ...result,
@@ -120,7 +147,8 @@ async function createVideoConcept(prompt, style) {
     concept: result.concept || fallback.concept,
     style: result.style || style,
     palette: result.palette || fallback.palette,
-    hook: result.hook || fallback.hook
+    hook: result.hook || fallback.hook,
+    duration: result.duration || fallback.duration
   };
 }
 
@@ -128,6 +156,7 @@ async function createGameConcept(prompt, genre) {
   const fallback = buildMockGame(prompt, genre);
   const aiPrompt = `Create a game design JSON with fields: title, genre, objective, mechanics (array), levelIdea. Prompt: ${prompt}. Genre: ${genre}.`;
   const result = await generateWithAI(aiPrompt, 'game', fallback);
+
   return {
     ...fallback,
     ...result,
@@ -140,7 +169,75 @@ async function createGameConcept(prompt, genre) {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', name: 'AI Video and Game Maker', aiEnabled: Boolean(openai) });
+  res.json({
+    status: 'ok',
+    name: 'AI Video and Game Maker',
+    aiEnabled: Boolean(openai)
+  });
+});
+
+app.post('/api/login', (req, res) => {
+  const username = (req.body?.username || 'creator').trim();
+  const password = String(req.body?.password || '');
+
+  if (!username) {
+    return res.status(400).json({ success: false, message: 'Username is required.' });
+  }
+
+  if (password.length < 3) {
+    return res.status(400).json({ success: false, message: 'Password is required.' });
+  }
+
+  res.json({
+    success: true,
+    user: { username, role: 'creator' },
+    message: `Logged in as ${username}`
+  });
+});
+
+app.get('/api/projects', (_req, res) => {
+  const projects = readProjects();
+  res.json({ projects });
+});
+
+app.post('/api/projects', (req, res) => {
+  const payload = req.body || {};
+  const projects = readProjects();
+  const project = {
+    id: payload.id || `project-${Date.now()}`,
+    title: payload.title || 'New Project',
+    prompt: payload.prompt || 'A heroic fantasy creature in a neon city',
+    style: payload.style || 'cinematic',
+    genre: payload.genre || 'action',
+    video: payload.video || buildMockVideo(payload.prompt, payload.style),
+    game: payload.game || buildMockGame(payload.prompt, payload.genre),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const index = projects.findIndex((item) => item.id === project.id);
+  if (index >= 0) {
+    projects[index] = { ...projects[index], ...project, updatedAt: new Date().toISOString() };
+  } else {
+    projects.unshift(project);
+  }
+
+  writeProjects(projects);
+  res.status(201).json({ project });
+});
+
+app.put('/api/projects/:id', (req, res) => {
+  const projects = readProjects();
+  const index = projects.findIndex((item) => item.id === req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Project not found.' });
+  }
+
+  const updated = { ...projects[index], ...req.body, updatedAt: new Date().toISOString() };
+  projects[index] = updated;
+  writeProjects(projects);
+  res.json({ project: updated });
 });
 
 app.get('/api/generate', async (req, res) => {
@@ -178,15 +275,16 @@ app.get('/api/game', async (req, res) => {
 });
 
 app.get('/api/export', (req, res) => {
-  const project = {
+  const payload = {
+    title: req.query.title || 'Untitled Project',
     prompt: req.query.prompt || 'creative project',
     style: req.query.style || 'cinematic',
     genre: req.query.genre || 'action',
     exportedAt: new Date().toISOString()
   };
 
-  res.setHeader('Content-Disposition', 'attachment; filename="project-export.json"');
-  res.json(project);
+  res.setHeader('Content-Disposition', `attachment; filename="${payload.title.replace(/\s+/g, '-').toLowerCase()}.json"`);
+  res.json(payload);
 });
 
 app.get('*', (_req, res) => {
@@ -196,6 +294,6 @@ app.get('*', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`AI Video and Game Maker running at http://localhost:${PORT}`);
   if (!openai) {
-    console.log('No OPENAI_API_KEY detected. Using built-in creative mock generation for offline demos.');
+    console.log('No OPENAI_API_KEY detected. Using offline mock generation mode.');
   }
 });

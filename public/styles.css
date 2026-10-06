@@ -3,98 +3,126 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Video + Game Maker</title>
+    <title>AI Video + Game Maker Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="page-shell">
       <header class="topbar">
         <div class="brand-wrap">
           <div class="brand-mark">AI</div>
           <div>
-            <p class="eyebrow">Creative AI Studio</p>
+            <p class="eyebrow">Creative Studio</p>
             <h1>Video + Game Maker</h1>
           </div>
         </div>
         <div class="header-actions">
-          <button class="secondary-btn" id="exportBtn">Export JSON</button>
+          <button class="secondary-btn" id="loginBtn">Login</button>
           <button class="primary-btn" id="generateBtn">Generate concept</button>
         </div>
       </header>
 
-      <main class="dashboard-grid">
-        <section class="panel generator-panel">
+      <main class="split-layout">
+        <aside class="panel sidebar">
           <div class="panel-header">
-            <p class="eyebrow">Creative controls</p>
-            <h2>Build a concept</h2>
+            <p class="eyebrow">Workspace</p>
+            <h2>Projects</h2>
           </div>
 
-          <label for="promptInput">Story prompt</label>
-          <textarea id="promptInput" rows="6">A neon dragon guarding a floating city at sunrise</textarea>
+          <div class="project-actions">
+            <button class="primary-btn small" id="newProjectBtn">New project</button>
+            <button class="secondary-btn small" id="saveProjectBtn">Save</button>
+          </div>
 
-          <div class="field-grid">
-            <div>
-              <label for="styleSelect">Video style</label>
-              <select id="styleSelect">
-                <option value="cinematic">Cinematic</option>
-                <option value="anime">Anime</option>
-                <option value="realistic">Realistic</option>
-                <option value="dreamy">Dreamy</option>
-                <option value="retro">Retro</option>
-              </select>
+          <div id="projectList" class="project-list"></div>
+        </aside>
+
+        <section class="main-panel">
+          <div class="panel generator-panel">
+            <div class="panel-header">
+              <p class="eyebrow">Creative controls</p>
+              <h2>Build your concept</h2>
             </div>
 
-            <div>
-              <label for="genreSelect">Game genre</label>
-              <select id="genreSelect">
-                <option value="action">Action Adventure</option>
-                <option value="puzzle">Puzzle Platformer</option>
-                <option value="racing">Racing</option>
-                <option value="roguelike">Rogue-lite</option>
-              </select>
+            <div class="field-row">
+              <div class="field-group full">
+                <label for="projectNameInput">Project name</label>
+                <input id="projectNameInput" type="text" value="Sky Dragon Chronicles" />
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-group full">
+                <label for="promptInput">Story prompt</label>
+                <textarea id="promptInput" rows="6">A neon dragon guarding a floating city at sunrise</textarea>
+              </div>
+            </div>
+
+            <div class="field-row two-col">
+              <div class="field-group">
+                <label for="styleSelect">Video style</label>
+                <select id="styleSelect">
+                  <option value="cinematic">Cinematic</option>
+                  <option value="anime">Anime</option>
+                  <option value="realistic">Realistic</option>
+                  <option value="dreamy">Dreamy</option>
+                  <option value="retro">Retro</option>
+                </select>
+              </div>
+
+              <div class="field-group">
+                <label for="genreSelect">Game genre</label>
+                <select id="genreSelect">
+                  <option value="action">Action Adventure</option>
+                  <option value="puzzle">Puzzle Platformer</option>
+                  <option value="racing">Racing</option>
+                  <option value="roguelike">Rogue-lite</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row two-col">
+              <div class="field-group">
+                <label for="modelSelect">AI mode</label>
+                <select id="modelSelect">
+                  <option value="offline">Offline mock</option>
+                  <option value="gpt-4o-mini">GPT 4o Mini</option>
+                  <option value="gpt-4o">GPT 4o</option>
+                </select>
+              </div>
+
+              <div class="field-group">
+                <label for="usernameDisplay">Creator</label>
+                <input id="usernameDisplay" type="text" value="creator" readonly />
+              </div>
+            </div>
+
+            <div class="action-row">
+              <button class="secondary-btn" id="videoBtn">Generate video</button>
+              <button class="secondary-btn" id="gameBtn">Generate game</button>
+              <button class="primary-btn" id="playBtn">Play demo</button>
+              <button class="ghost-btn" id="exportBtn">Export JSON</button>
+            </div>
+
+            <div class="status-box">
+              <p class="label">Status</p>
+              <p id="statusText">Ready to generate.</p>
             </div>
           </div>
 
-          <div class="field-grid">
-            <div>
-              <label for="modelSelect">AI model</label>
-              <select id="modelSelect">
-                <option value="gpt-4o-mini">GPT 4o Mini</option>
-                <option value="gpt-4o">GPT 4o</option>
-                <option value="offline">Offline mock model</option>
-              </select>
+          <div class="panel preview-panel">
+            <div class="canvas-header">
+              <div>
+                <p class="eyebrow">Playable preview</p>
+                <h2 id="previewTitle">Sky Dragon Chronicles</h2>
+              </div>
+              <button class="ghost-btn" id="resetGameBtn">Reset</button>
             </div>
-
-            <div>
-              <label for="projectName">Project name</label>
-              <input id="projectName" type="text" value="Sky Dragon Chronicles" />
-            </div>
+            <canvas id="gameCanvas" width="760" height="360"></canvas>
           </div>
-
-          <div class="action-row">
-            <button class="secondary-btn" id="videoBtn">Generate video</button>
-            <button class="secondary-btn" id="gameBtn">Generate game</button>
-            <button class="primary-btn" id="playBtn">Play demo</button>
-          </div>
-
-          <div class="status-box">
-            <p class="label">Status</p>
-            <p id="statusText">Ready to generate.</p>
-          </div>
-        </section>
-
-        <section class="panel preview-panel">
-          <div class="canvas-header">
-            <div>
-              <p class="eyebrow">Playable preview</p>
-              <h2 id="previewTitle">Sky Dragon Chronicles</h2>
-            </div>
-            <button class="ghost-btn" id="resetGameBtn">Reset</button>
-          </div>
-          <canvas id="gameCanvas" width="760" height="380"></canvas>
         </section>
       </main>
 
@@ -114,7 +142,7 @@
 
         <article class="panel card">
           <div class="card-header">
-            <p class="eyebrow">Game design</p>
+            <p class="eyebrow">Game concept</p>
             <h3 id="gameTitle">Loading...</h3>
           </div>
           <p id="gameObjective" class="result-copy"></p>
@@ -138,7 +166,7 @@
             </div>
             <div>
               <p class="label">Goal</p>
-              <p id="summaryGoal">Build playable story pitch</p>
+              <p id="summaryGoal">Build a playable story pitch</p>
             </div>
             <div>
               <p class="label">Vision</p>
@@ -151,6 +179,20 @@
           </div>
         </article>
       </section>
+    </div>
+
+    <div id="loginModal" class="modal hidden">
+      <div class="modal-card panel">
+        <h3>Login to studio</h3>
+        <label for="loginUsername">Username</label>
+        <input id="loginUsername" type="text" value="creator" />
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" value="letmein" />
+        <div class="modal-actions">
+          <button class="secondary-btn" id="closeLoginBtn">Cancel</button>
+          <button class="primary-btn" id="submitLoginBtn">Login</button>
+        </div>
+      </div>
     </div>
 
     <script src="/app.js"></script>
